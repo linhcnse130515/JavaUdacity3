@@ -9,6 +9,7 @@ import com.udacity.catpoint.security.data.Sensor;
 
 import java.awt.image.BufferedImage;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 
@@ -111,9 +112,14 @@ public class SecurityService {
      * Internal method for updating the alarm status when a sensor has been activated.
      */
     private void handleSensorActivated() {
-        switch (securityRepository.getAlarmStatus()) {
-            case NO_ALARM -> setAlarmStatus(AlarmStatus.PENDING_ALARM);
-            case PENDING_ALARM -> setAlarmStatus(AlarmStatus.ALARM);
+        if (Objects.nonNull(securityRepository.getAlarmStatus())) {
+            switch (securityRepository.getAlarmStatus()) {
+                case NO_ALARM:
+                    setAlarmStatus(AlarmStatus.PENDING_ALARM);
+                    break;
+                case PENDING_ALARM:
+                    setAlarmStatus(AlarmStatus.ALARM);
+            }
         }
     }
 

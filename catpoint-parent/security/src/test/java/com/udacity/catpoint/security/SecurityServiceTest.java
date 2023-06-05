@@ -18,23 +18,22 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class SecurityServiceTest {
+public class SecurityServiceTest {
 
     private SecurityService securityService;
     private Sensor doorSensor;
     private Sensor windowSensor;
 
-    @Mock
     private SecurityRepository securityRepository;
 
-    @Mock
     private  ImageService imageService;
 
-    @Mock
     private BufferedImage bufferedImage;
 
-    @BeforeEach
     public void init() {
+        securityRepository = mock(SecurityRepository.class);
+        imageService = mock(ImageService.class);
+        bufferedImage = mock(BufferedImage.class);
         securityService = new SecurityService(securityRepository, imageService);
 
         doorSensor = new Sensor("Door Sensor", SensorType.DOOR);
@@ -43,7 +42,8 @@ class SecurityServiceTest {
 
     //    1. If alarm is armed and a sensor becomes activated, put the system into pending alarm status.
     @Test
-    public void armed_sensorActivated_setToPendingAlarm() {
+    public void test_armed_sensorActivated_setToPendingAlarm() {
+        init();
         // current arming status to be armed home, and alarm status to be no alarm
         when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_HOME);
         when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.NO_ALARM);
@@ -53,7 +53,7 @@ class SecurityServiceTest {
 
         // alarm status should be checked twice, once to confirm it's not already in alarm state,
         // then to check the current alarm state to modify while activating or deactivating
-        verify(securityRepository, times(2)).getAlarmStatus();
+        verify(securityRepository, times(3)).getAlarmStatus();
         // arming status should be checked once to ensure it is not disarmed
         verify(securityRepository, times(1)).getArmingStatus();
         // alarm status should be set to pending alarm but never to alarm or no alarm
@@ -68,7 +68,8 @@ class SecurityServiceTest {
 
     //    2. If alarm is armed and a sensor becomes activated and the system is already pending alarm, set the alarm status to alarm.
     @Test
-    public void armed_sensorActivated_inPendingAlarm_setToAlarm() {
+    public void test_armed_sensorActivated_inPendingAlarm_setToAlarm() {
+        init();
         // current arming status to be armed home, and alarm status to be pending alarm
         when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_HOME);
         when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.PENDING_ALARM);
@@ -78,7 +79,7 @@ class SecurityServiceTest {
 
         // alarm status should be checked twice, once to confirm it's not already in alarm state,
         // then to check the current alarm state to modify while activating or deactivating
-        verify(securityRepository, times(2)).getAlarmStatus();
+        verify(securityRepository, times(3)).getAlarmStatus();
         // arming status should be checked once to ensure it is not disarmed
         verify(securityRepository, times(1)).getArmingStatus();
         // alarm status should be set to alarm but never to pending alarm or no alarm
@@ -93,7 +94,8 @@ class SecurityServiceTest {
 
     //    3. If pending alarm and all sensors are inactive, return to no alarm state.
     @Test
-    public void pendingAlarm_allSensorsInactive_setToNoAlarmState() {
+    public void test_pendingAlarm_allSensorsInactive_setToNoAlarmState() {
+        init();
         // activate all sensors, current alarm status to be pending alarm
         doorSensor.setActive(true);
         windowSensor.setActive(true);
@@ -124,7 +126,8 @@ class SecurityServiceTest {
 
     //    4. If alarm is active, change in sensor state should not affect the alarm state.
     @Test
-    public void alarmActive_changeSensorState_alarmStateNotAffected() {
+    public void test_alarmActive_changeSensorState_alarmStateNotAffected() {
+        init();
         // activate door sensor, alarm status to be alarm
         doorSensor.setActive(true);
         when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.ALARM);
@@ -146,7 +149,8 @@ class SecurityServiceTest {
 
     //    5. If a sensor is activated while already active and the system is in pending state, change it to alarm state.
     @Test
-    public void activateAlreadyActiveSensor_inPendingAlarm_setToAlarm() {
+    public void test_activateAlreadyActiveSensor_inPendingAlarm_setToAlarm() {
+        init();
         // activate door sensor, alarm status to be pending alarm
         doorSensor.setActive(true);
         when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.PENDING_ALARM);
@@ -156,7 +160,7 @@ class SecurityServiceTest {
 
         // alarm status should be checked twice, once to confirm it's not already in alarm state,
         // then to check the current alarm state to modify while activating or deactivating
-        verify(securityRepository, times(2)).getAlarmStatus();
+        verify(securityRepository, times(3)).getAlarmStatus();
         // arming status should be checked once to ensure it is not disarmed
         verify(securityRepository, times(1)).getArmingStatus();
         // alarm status should not be affected
@@ -170,7 +174,8 @@ class SecurityServiceTest {
     //    6. If a sensor is deactivated while already inactive, make no changes to the alarm state.
     @ParameterizedTest
     @EnumSource(AlarmStatus.class)
-    public void deactivateAlreadyInactiveSensor_alarmStateNotAffected(AlarmStatus alarmStatus) {
+    public void test_deactivateAlreadyInactiveSensor_alarmStateNotAffected(AlarmStatus alarmStatus) {
+        init();
         // set to one of the alarm statuses
         when(securityRepository.getAlarmStatus()).thenReturn(alarmStatus);
 
@@ -191,7 +196,8 @@ class SecurityServiceTest {
 
     //    7. If the image service identifies an image containing a cat while the system is armed-home, put the system into alarm status.
     @Test
-    public void armedHome_catDetected_setToAlarm() {
+    public void test_armedHome_catDetected_setToAlarm() {
+        init();
         // set armed status to armed home, make cat detected true
         when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_HOME);
         when(imageService.imageContainsCat(any(BufferedImage.class), anyFloat())).thenReturn(true);
@@ -210,7 +216,8 @@ class SecurityServiceTest {
     }
 
     @Test
-    public void armedAway_catDetected_alarmNotAffected() {
+    public void test_armedAway_catDetected_alarmNotAffected() {
+        init();
         // set armed status to armed away, make cat detected true
         when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_AWAY);
         when(imageService.imageContainsCat(any(BufferedImage.class), anyFloat())).thenReturn(true);
@@ -230,7 +237,8 @@ class SecurityServiceTest {
 
     //    8. If the image service identifies an image that does not contain a cat, change the status to no alarm as long as the sensors are not active.
     @Test
-    public void catNotDetected_sensorsNotActive_setToNoAlarm() {
+    public void test_catNotDetected_sensorsNotActive_setToNoAlarm() {
+        init();
         // make cat detected false
         when(imageService.imageContainsCat(any(BufferedImage.class), anyFloat())).thenReturn(false);
 
@@ -248,7 +256,8 @@ class SecurityServiceTest {
     }
 
     @Test
-    public void catNotDetected_atLeastOneSensorActive_alarmStateNotAffected() {
+    public void test_catNotDetected_atLeastOneSensorActive_alarmStateNotAffected() {
+        init();
         // make cat detected false, activate one of the sensors
         when(imageService.imageContainsCat(any(BufferedImage.class), anyFloat())).thenReturn(false);
         doorSensor.setActive(false);
@@ -270,7 +279,8 @@ class SecurityServiceTest {
 
     //    9. If the system is disarmed, set the status to no alarm.
     @Test
-    public void disarm_setToNoAlarm() {
+    public void test_disarm_setToNoAlarm() {
+        init();
         // make the system disarmed
         securityService.setArmingStatus(ArmingStatus.DISARMED);
 
@@ -288,7 +298,8 @@ class SecurityServiceTest {
 
     @ParameterizedTest
     @EnumSource(ArmingStatus.class)
-    public void fromDifferentArmedStatus_disarm_setToNoAlarm(ArmingStatus armingStatus) {
+    public void test_fromDifferentArmedStatus_disarm_setToNoAlarm(ArmingStatus armingStatus) {
+        init();
         // set current arming status (to ensure current arming status doesn't affect the behavior)
         lenient().when(securityRepository.getArmingStatus()).thenReturn(armingStatus);
 
@@ -309,7 +320,8 @@ class SecurityServiceTest {
 
     @ParameterizedTest
     @EnumSource(AlarmStatus.class)
-    public void withDifferentAlarmStatus_disarm_setToNoAlarm(AlarmStatus alarmStatus) {
+    public void test_withDifferentAlarmStatus_disarm_setToNoAlarm(AlarmStatus alarmStatus) {
+        init();
         // set current alarm status (to ensure current alarm status doesn't affect the behavior)
         lenient().when(securityRepository.getAlarmStatus()).thenReturn(alarmStatus);
 
@@ -330,7 +342,8 @@ class SecurityServiceTest {
 
     //    10. If the system is armed, reset all sensors to inactive.
     @Test
-    public void setArmedHome_setAllSensorsToInactive() {
+    public void test_setArmedHome_setAllSensorsToInactive() {
+        init();
         // current arming status: disarmed, all sensors active
         when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.DISARMED);
         when(securityRepository.getSensors()).thenReturn(Set.of(doorSensor, windowSensor));
@@ -350,7 +363,8 @@ class SecurityServiceTest {
     }
 
     @Test
-    public void setArmedAway_setAllSensorsToInactive() {
+    public void test_setArmedAway_setAllSensorsToInactive() {
+        init();
         // current arming status: disarmed, all sensors active
         when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.DISARMED);
         when(securityRepository.getSensors()).thenReturn(Set.of(doorSensor, windowSensor));
@@ -370,7 +384,8 @@ class SecurityServiceTest {
     }
 
     @Test
-    public void setArmedAway_oneSensorActive_setAllSensorsToInactive() {
+    public void test_setArmedAway_oneSensorActive_setAllSensorsToInactive() {
+        init();
         // current arming status: disarmed, door sensor active, window sensor inactive
         when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.DISARMED);
         when(securityRepository.getSensors()).thenReturn(Set.of(doorSensor, windowSensor));
@@ -392,7 +407,8 @@ class SecurityServiceTest {
 
     //    11. If the system is armed-home while the camera shows a cat, set the alarm status to alarm.
     @Test
-    public void setArmedHome_catDetected_setToAlarm() {
+    public void test_setArmedHome_catDetected_setToAlarm() {
+        init();
         // current arming status: disarmed, camera shows cat
         when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.DISARMED);
         when(imageService.imageContainsCat(any(BufferedImage.class), anyFloat())).thenReturn(true);
@@ -410,7 +426,8 @@ class SecurityServiceTest {
     }
 
     @Test
-    public void setArmedAway_catDetected_alarmNotAffected() {
+    public void test_setArmedAway_catDetected_alarmNotAffected() {
+        init();
         // current arming status: disarmed, camera shows cat
         when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.DISARMED);
         when(imageService.imageContainsCat(any(BufferedImage.class), anyFloat())).thenReturn(true);
@@ -428,7 +445,8 @@ class SecurityServiceTest {
     }
 
     @Test
-    public void setArmedHomeFromAway_catDetected_setToAlarm() {
+    public void test_setArmedHomeFromAway_catDetected_setToAlarm() {
+        init();
         // current arming status: armed away, camera shows cat
         when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_AWAY);
         when(imageService.imageContainsCat(any(BufferedImage.class), anyFloat())).thenReturn(true);
